@@ -1,0 +1,24 @@
+library(data.table)
+library(dplyr)
+library(DESeq2)
+
+data.raw <- fread("umi_counts.txt", sep= "\t", header = TRUE, data.table = FALSE)
+rownames(data.raw) <- data.raw[,1]
+data.raw <- data.raw[,-1]
+
+data.raw <- data.raw[rowSums(data.raw > 1) > 4,]
+
+meta <- data.frame(samples = colnames(data.raw))
+meta[,1] <- as.integer(meta$samples)
+meta$index <- as.integer(rownames(meta))
+meta <- arrange(meta, samples)
+meta$treatment <- c("0", "6h", "1d", "2d", "3d", "4d", "7d", "8d", "0", "6h", "1d", "2d", "3d", "4d", "7d", "8d", "0", "6h", "1d", "2d", "3d", "4d", "7d", "8d")
+meta <- arrange(meta, index)
+meta.data <- data.frame(treatment = meta$treatment)
+rownames(meta.data) <- colnames(data.raw)
+
+dds <- DESeqDataSetFromMatrix(countData = data.raw, colData = meta.data, design = ~ treatment)
+vsd <- vst(dds, blind = TRUE)
+pca_data <- plotPCA(vsd, intgroup = "treatment", returnData = TRUE)
+
+ggplot(pca_data, aes(x= PC1, y = PC2, col = treatment)) + geom_point() + scale_colour_discrete(breaks=c("0", "6h", "1d", "2d", "3d", "4d", "7d", "8d"))
